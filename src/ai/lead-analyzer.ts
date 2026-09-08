@@ -74,13 +74,39 @@ export class LeadAnalyzer {
   "language": "en"
 }`;
 
-    const response = await this.ai!.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json'
+    const modelsToTry = [
+      process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-2.0-flash'
+    ];
+
+    let response = null;
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+      try {
+        response = await this.ai!.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json'
+          }
+        });
+        if (response) break;
+      } catch (err: any) {
+        lastError = err;
+        const msg = String(err?.message || '');
+        if (msg.includes('404') || msg.includes('not found') || msg.includes('is no longer available')) {
+          console.warn(`[AI Analyzer] Модель ${model} недоступна, пробуем альтернативную...`);
+          continue;
+        }
+        throw err;
       }
-    });
+    }
+
+    if (!response) {
+      throw lastError || new Error('Все модели Gemini вернули ошибку');
+    }
 
     const text = response.text || '{}';
     const parsed = JSON.parse(text);
@@ -93,7 +119,7 @@ export class LeadAnalyzer {
       summary: parsed.summary || lead.title,
       pitch: parsed.pitch || this.generateDynamicPitch(lead, this.isCyrillic(lead.description) ? 'ua' : 'en'),
       language: parsed.language || (this.isCyrillic(lead.description) ? 'ua' : 'en'),
-      reason: 'Gemini 2.5 Flash персональный анализ'
+      reason: 'Gemini AI персональный анализ'
     };
   }
 
