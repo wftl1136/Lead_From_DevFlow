@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { learningStorage } from '../evolution/learning-storage.js';
+import { reflectionEngine } from '../evolution/reflection-engine.js';
 import { statsTracker } from '../stats/stats-tracker.js';
 
 export class TelegramBotListener {
@@ -25,7 +27,7 @@ export class TelegramBotListener {
     }
 
     this.isRunning = true;
-    console.log('🤖 [Telegram Listener] Интерактивные кнопки и команды (/stats, /scan) активированы');
+    console.log('🤖 [Telegram Listener] Интерактивные кнопки и команды (/stats, /scan, /evolve) активированы');
 
     // Регистрируем команды в Telegram меню
     await this.registerCommands();
@@ -43,6 +45,7 @@ export class TelegramBotListener {
       await axios.post(`https://api.telegram.org/bot${this.botToken}/setMyCommands`, {
         commands: [
           { command: 'stats', description: '📊 Статистика фильтрации (причины и количество)' },
+          { command: 'evolve', description: '🧠 Запустить цикл самообучения и поиск новых источников' },
           { command: 'scan', description: '🔄 Запустить сканирование вручную прямо сейчас' },
           { command: 'start', description: '🚀 Главное меню и кнопки управления' }
         ]
@@ -84,14 +87,36 @@ export class TelegramBotListener {
       // 1. Обработка нажатий на Inline-кнопки
       if (update.callback_query) {
         const cq = update.callback_query;
-        const data = cq.data;
+        const data = cq.data || '';
         const chatId = cq.message?.chat?.id;
 
-        // Подтверждаем получение клика
+        if (data.startsWith('fb_g:')) {
+          const shortId = data.replace('fb_g:', '');
+          learningStorage.recordFeedback(shortId, 'good');
+          await this.answerCallbackQuery(cq.id, '🔥 Добавлено в эталоны!');
+          if (chatId) {
+            await this.sendTextMessage(chatId, '🔥 <b>Заказ сохранен как эталон!</b>\nНейросеть выучила этот проект и будет использовать его стиль для будущих откликов.');
+          }
+          return;
+        }
+
+        if (data.startsWith('fb_b:')) {
+          const shortId = data.replace('fb_b:', '');
+          learningStorage.recordFeedback(shortId, 'bad');
+          await this.answerCallbackQuery(cq.id, '💩 Отмечено как нерелевантное');
+          if (chatId) {
+            await this.sendTextMessage(chatId, '💩 <b>Заказ отмечен как нерелевантный.</b>\nКлючевые сигналы добавлены в динамический стоп-лист.');
+          }
+          return;
+        }
+
         await this.answerCallbackQuery(cq.id);
 
         if (data === 'get_stats' && chatId) {
           await this.sendStatsMessage(chatId);
+        } else if (data === 'run_evolve' && chatId) {
+          await this.sendTextMessage(chatId, '🧠 <b>Запускаю цикл самообучения и поиск новых источников через Tavily...</b>');
+          await reflectionEngine.runEvolutionCycle();
         } else if (data === 'run_scan' && chatId) {
           await this.sendTextMessage(chatId, '🔄 <b>Запускаю сканирование всех площадок...</b>');
           if (this.onManualScanRequested) {
@@ -109,6 +134,9 @@ export class TelegramBotListener {
 
         if (text === '/stats' || text.includes('статистик') || text === '📊 статистика') {
           await this.sendStatsMessage(chatId);
+        } else if (text === '/evolve' || text.includes('обуч') || text === '🧠 самообучение') {
+          await this.sendTextMessage(chatId, '🧠 <b>Запускаю цикл самообучения и поиск новых источников через Tavily...</b>');
+          await reflectionEngine.runEvolutionCycle();
         } else if (text === '/scan' || text.includes('сканир') || text === '🔄 сканировать сейчас') {
           await this.sendTextMessage(chatId, '🔄 <b>Запускаю сканирование всех площадок...</b>');
           if (this.onManualScanRequested) {
@@ -156,7 +184,8 @@ export class TelegramBotListener {
       parse_mode: 'HTML',
       reply_markup: {
         keyboard: [
-          [{ text: '📊 Статистика' }, { text: '🔄 Сканировать сейчас' }]
+          [{ text: '📊 Статистика' }, { text: '🔄 Сканировать сейчас' }],
+          [{ text: '🧠 Самообучение' }]
         ],
         resize_keyboard: true
       }

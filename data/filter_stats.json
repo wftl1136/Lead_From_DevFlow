@@ -1,20 +1,20 @@
 {
   "startedAt": "2026-09-08T16:00:16.682Z",
-  "lastScanAt": "2026-09-08T16:28:38.961Z",
-  "totalFound": 3540,
+  "lastScanAt": "2026-09-08T16:31:34.103Z",
+  "totalFound": 4313,
   "totalSent": 1,
   "byReason": {
     "nonWeb": 2,
     "oldLead": 8,
     "antiRu": 0,
-    "duplicate": 3529
+    "duplicate": 4302
   },
   "bySource": {
-    "Freelancehunt": 400,
-    "Djinni.co": 1384,
-    "Threads": 261,
-    "Hacker News": 312,
-    "Reddit": 199,
-    "WeWorkRemotely": 984
+    "Freelancehunt": 550,
+    "Djinni.co": 1730,
+    "Threads": 289,
+    "Hacker News": 390,
+    "Reddit": 247,
+    "WeWorkRemotely": 1107
   }
 }

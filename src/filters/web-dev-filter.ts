@@ -1,3 +1,4 @@
+import { learningStorage } from '../evolution/learning-storage.js';
 import { RawLead } from '../types.js';
 
 export class WebDevFilter {
@@ -51,12 +52,22 @@ export class WebDevFilter {
   public static isTargetWebProject(lead: RawLead): { match: boolean; reason?: string } {
     const text = `${lead.title} ${lead.description}`.toLowerCase();
 
-    // 1. Проверка на стоп-темы (копирайтинг, видео, логотипы, бытовой поиск сайтов)
+    // 1. Проверка на базовые и динамически выученные стоп-темы
     for (const forbidden of this.FORBIDDEN_TOPICS) {
       if (text.includes(forbidden)) {
         return {
           match: false,
           reason: `Исключено по стоп-теме: "${forbidden}"`
+        };
+      }
+    }
+
+    // Проверка динамических стоп-слов, выученных ботом по реакциям пользователя
+    for (const learned of learningStorage.getDynamicStopWords()) {
+      if (text.includes(learned)) {
+        return {
+          match: false,
+          reason: `Исключено по выученному стоп-слову: "${learned}"`
         };
       }
     }

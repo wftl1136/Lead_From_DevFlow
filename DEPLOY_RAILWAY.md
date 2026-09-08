@@ -37,6 +37,7 @@
 | `SCAN_INTERVAL_MINUTES` | `5` |
 | `MIN_SCORE_TO_NOTIFY` | `1` |
 | `GEMINI_API_KEY` | *(ваш ключ при наличии)* |
+| `TAVILY_API_KEY` | `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` | Ключ Tavily для автономного поиска новых площадок |
 
 ---
 

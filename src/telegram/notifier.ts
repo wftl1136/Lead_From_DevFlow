@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { LearningStorage } from '../evolution/learning-storage.js';
 import { AnalyzedLead } from '../types.js';
 
 export class TelegramNotifier {
@@ -17,6 +18,7 @@ export class TelegramNotifier {
     }
 
     const message = this.formatLeadHtml(lead);
+    const shortId = LearningStorage.getShortId(lead.id);
 
     try {
       await this.sendWithRetry({
@@ -34,12 +36,22 @@ export class TelegramNotifier {
             ],
             [
               {
-                text: '📊 Статистика фильтрации',
+                text: '🔥 Топ заказ (В базу)',
+                callback_data: `fb_g:${shortId}`
+              },
+              {
+                text: '💩 Не то / Спам',
+                callback_data: `fb_b:${shortId}`
+              }
+            ],
+            [
+              {
+                text: '📊 Статистика',
                 callback_data: 'get_stats'
               },
               {
-                text: '🔄 Сканировать',
-                callback_data: 'run_scan'
+                text: '🧠 Самообучение',
+                callback_data: 'run_evolve'
               }
             ]
           ]

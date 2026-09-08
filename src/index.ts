@@ -2,6 +2,7 @@ import http from 'node:http';
 import 'dotenv/config';
 import { leadAnalyzer } from './ai/lead-analyzer.js';
 import { DjinniCollector } from './collectors/djinni.js';
+import { DynamicSourcesCollector } from './collectors/dynamic-sources.js';
 import { FreelancehuntCollector } from './collectors/freelancehunt.js';
 import { HackerNewsCollector } from './collectors/hn-jobs.js';
 import { RedditCollector } from './collectors/reddit.js';
@@ -9,6 +10,7 @@ import { RemoteBoardsCollector } from './collectors/remote-boards.js';
 import { ThreadsCollector } from './collectors/threads.js';
 import { UpworkCollector } from './collectors/upwork.js';
 import { db } from './db/database.js';
+import { reflectionEngine } from './evolution/reflection-engine.js';
 import { GeoBlacklistFilter } from './filters/geo-blacklist.js';
 import { RecencyFilter } from './filters/recency-filter.js';
 import { WebDevFilter } from './filters/web-dev-filter.js';
@@ -38,6 +40,7 @@ class LeadRadarAgent {
   private intervalMinutes: number = 5;
   private maxAgeHours: number = 5.0;
   private timer: NodeJS.Timeout | null = null;
+  private evolutionTimer: NodeJS.Timeout | null = null;
   private botListener: TelegramBotListener;
 
   constructor() {
@@ -48,7 +51,8 @@ class LeadRadarAgent {
       new HackerNewsCollector(),
       new RedditCollector(),
       new RemoteBoardsCollector(),
-      new UpworkCollector()
+      new UpworkCollector(),
+      new DynamicSourcesCollector()
     ];
 
     this.intervalMinutes = parseInt(process.env.SCAN_INTERVAL_MINUTES || '5', 10);
@@ -80,10 +84,20 @@ class LeadRadarAgent {
     // Первый цикл
     await this.runScanCycle();
 
-    // Планировщик регулярного запуска
+    // Планировщик регулярного запуска поиска лидов
     this.timer = setInterval(
       () => this.runScanCycle(),
       this.intervalMinutes * 60 * 1000
+    );
+
+    // Планировщик ежедневного самообучения и рефлексии (раз в 24 часа)
+    this.evolutionTimer = setInterval(
+      () => {
+        reflectionEngine.runEvolutionCycle().catch(err => {
+          console.warn('[Evolution Engine] Ошибка фоновой рефлексии:', err?.message);
+        });
+      },
+      24 * 60 * 60 * 1000
     );
   }
 
@@ -91,6 +105,10 @@ class LeadRadarAgent {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
+    }
+    if (this.evolutionTimer) {
+      clearInterval(this.evolutionTimer);
+      this.evolutionTimer = null;
     }
     this.botListener.stop();
     console.log('🛑 [LeadRadar AI] Агент остановлен');

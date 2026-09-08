@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { SOURCES_CONFIG } from '../../config/sources.config.js';
+import { learningStorage } from '../evolution/learning-storage.js';
 import { AnalyzedLead, RawLead } from '../types.js';
 
 export class LeadAnalyzer {
@@ -27,23 +28,37 @@ export class LeadAnalyzer {
       this.initAi();
     }
 
+    let result: AnalyzedLead;
     if (this.hasApiKey && this.ai) {
       try {
-        return await this.analyzeWithGemini(lead);
+        result = await this.analyzeWithGemini(lead);
       } catch (error) {
         console.warn(`[AI Analyzer] Ошибка вызова Gemini API для "${lead.title.slice(0, 30)}":`, error);
+        result = this.analyzeWithSmartHeuristics(lead);
       }
+    } else {
+      result = this.analyzeWithSmartHeuristics(lead);
     }
-    return this.analyzeWithSmartHeuristics(lead);
+
+    // Сохраняем в кэш обучения для интерактивной обратной связи (RLHF)
+    learningStorage.cacheRecentLead(result);
+    return result;
   }
 
   /**
    * Анализ с помощью нейросети Google Gemini (глубокая персонализация, перевод и уникальный питч)
    */
   private async analyzeWithGemini(lead: RawLead): Promise<AnalyzedLead> {
+    const goldExamples = learningStorage.getGoldExamples([], 2);
+    let fewShotSection = '';
+    if (goldExamples.length > 0) {
+      fewShotSection = `\n\nЭТАЛОННЫЕ ПРИМЕРЫ ПИТЧЕЙ, ОДОБРЕННЫХ РАЗРАБОТЧИКОМ (Используй их стиль и тон):
+${goldExamples.map((ex, i) => `[Пример ${i + 1}] Задача: "${ex.summary}" -> Отклик: "${ex.pitch}"`).join('\n')}`;
+    }
+
     const prompt = `Ты — профессиональный ИИ-ассистент опытного веб-разработчика из Украины (3+ года опыта).
 Стек разработчика:
-- WordPress, WooCommerce, HTML5, CSS3, JavaScript, TypeScript, React, Node.js, Next.js, Elementor, ACF Pro, Gutenberg, Tailwind, REST API, верстка по Figma, багфиксы, ускорение сайтов (PageSpeed).
+- WordPress, WooCommerce, HTML5, CSS3, JavaScript, TypeScript, React, Node.js, Next.js, Elementor, ACF Pro, Gutenberg, Tailwind, REST API, верстка по Figma, багфиксы, ускорение сайтов (PageSpeed).${fewShotSection}
 
 Проанализируй этот заказ на разработку/доработку:
 Платформа: ${lead.source}
