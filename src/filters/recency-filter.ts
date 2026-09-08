@@ -2,9 +2,9 @@ import { RawLead } from '../types.js';
 
 export class RecencyFilter {
   /**
-   * Проверяет, был ли заказ опубликован не более чем maxHours назад (по умолчанию 1 час)
+   * Проверяет, был был заказ опубликован не более чем maxHours назад (по умолчанию 5 часов)
    */
-  public static isRecent(lead: RawLead, maxHours: number = 1.0): { recent: boolean; ageMinutes: number } {
+  public static isRecent(lead: RawLead, maxHours: number = 5.0): { recent: boolean; ageMinutes: number } {
     if (!lead.postedAt || isNaN(lead.postedAt.getTime())) {
       // Если даты вообще нет, считаем не свежим во избежание старых постов
       return { recent: false, ageMinutes: 999999 };

@@ -33,7 +33,7 @@
 | `TELEGRAM_BOT_TOKEN` | `8910170174:AAHRf2XjYtmMYekspFDh6LY93_uN_9ZH5L4` |
 | `TELEGRAM_CHAT_ID` | `-1004302268313` |
 | `TELEGRAM_ADMIN_CHAT_ID` | `-1004302268313` |
-| `MAX_LEAD_AGE_HOURS` | `2` |
+| `MAX_LEAD_AGE_HOURS` | `5` | Макс. возраст заказа в часах (5 часов = 300 минут) |
 | `SCAN_INTERVAL_MINUTES` | `5` |
 | `MIN_SCORE_TO_NOTIFY` | `1` |
 | `GEMINI_API_KEY` | *(ваш ключ при наличии)* |

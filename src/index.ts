@@ -33,14 +33,14 @@ class LeadRadarAgent {
     ];
 
     this.intervalMinutes = parseInt(process.env.SCAN_INTERVAL_MINUTES || '5', 10);
-    this.maxAgeHours = parseFloat(process.env.MAX_LEAD_AGE_HOURS || '1.0');
+    this.maxAgeHours = parseFloat(process.env.MAX_LEAD_AGE_HOURS || '5.0');
   }
 
   public async start(): Promise<void> {
     console.log('====================================================');
     console.log('🚀 [LeadRadar AI] АВТОНОМНЫЙ АГЕНТ ЗАПУЩЕН');
     console.log(`⏱ Режим: АВТОМАТИЧЕСКИЙ (сканирование каждые ${this.intervalMinutes} мин)`);
-    console.log(`⏰ Фильтр свежести: ТОЛЬКО ПОСТЫ НЕ СТАРШЕ ${this.maxAgeHours * 60} МИНУТ`);
+    console.log(`⏰ Фильтр свежести: ТОЛЬКО ПОСТЫ НЕ СТАРШЕ ${this.maxAgeHours * 60} МИНУТ (${this.maxAgeHours} ЧАСОВ)`);
     console.log(`🎯 Фокус: ТОЛЬКО СОЗДАНИЕ И ДОРАБОТКА САЙТОВ`);
     console.log(`🛡 Защита Anti-RU: АКТИВНА (100% бан РФ, рублей, .ru)`);
     console.log(`📡 Активные источники: Freelancehunt, Djinni, Threads, Hacker News, Reddit, Remote Boards, Upwork`);
@@ -48,10 +48,10 @@ class LeadRadarAgent {
 
     // Оповещение об обновлении правил в Telegram
     await telegramNotifier.sendAlert(
-      `⏱ <b>LeadRadar AI: Активирован фильтр свежести (1 час)!</b>\n\n` +
-      `• <b>Максимальный возраст:</b> не старше <b>60 минут</b>\n` +
+      `⏱ <b>LeadRadar AI: Фильтр свежести обновлен (${this.maxAgeHours} ч)!</b>\n\n` +
+      `• <b>Максимальный возраст:</b> не старше <b>${this.maxAgeHours * 60} минут (${this.maxAgeHours} ч)</b>\n` +
       `• <b>Старые посты:</b> автоматически отбрасываются\n` +
-      `• <b>Только горячие лиды:</b> свежие запросы на создание и доработку сайтов`
+      `• <b>Только свежие лиды:</b> запросы на создание и доработку сайтов`
     );
 
     // Первый цикл
