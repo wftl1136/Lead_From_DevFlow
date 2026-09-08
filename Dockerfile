@@ -1,9 +1,10 @@
 FROM node:20-slim
 
-# Установка системных библиотек и Chromium для парсинга Threads
+# Установка Chromium и системных зависимостей
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
+    fonts-freefont-ttf \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
@@ -21,25 +22,25 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Пути к браузеру для puppeteer-core
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Копирование зависимостей
-COPY package*.json ./
-RUN npm install
+# Копируем зависимости
+COPY package*.json tsconfig.json ./
 
-# Копирование исходного кода
+# Устанавливаем все зависимости, включая компилятор
+RUN npm install --include=dev
+
+# Копируем исходный код
 COPY . .
 
-# Сборка проекта
+# Компилируем TypeScript
 RUN npm run build
 
-# Директория для базы просмотренных заказов
+# Создаем папку для базы
 RUN mkdir -p data
 
-# Запуск агента
+# Запуск
 CMD ["node", "dist/src/index.js"]

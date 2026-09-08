@@ -3,23 +3,20 @@
   "version": "1.0.0",
   "description": "Автономный ИИ-агент поиска и фильтрации заказов на разработку сайтов",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/src/index.js",
   "scripts": {
-    "start": "tsx src/index.ts",
-    "test:collector": "tsx scripts/test-collector.ts",
-    "test:telegram": "tsx scripts/test-telegram.ts",
+    "start": "node dist/src/index.js",
+    "dev": "tsx src/index.ts",
     "build": "tsc"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",
+    "@types/node": "^22.10.1",
     "axios": "^1.7.9",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.7",
-    "puppeteer-core": "^25.10.0",
-    "rss-parser": "^3.13.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.10.1",
+    "puppeteer-core": "^24.40.0",
+    "rss-parser": "^3.13.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
