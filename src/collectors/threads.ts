@@ -53,6 +53,9 @@ export class ThreadsCollector extends BaseCollector {
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
+          '--single-process',
+          '--no-zygote',
+          '--disable-extensions',
           `--user-data-dir=${tempProfile}`,
           '--disable-blink-features=AutomationControlled',
           '--lang=uk-UA,uk,en-US,en'
@@ -63,10 +66,21 @@ export class ThreadsCollector extends BaseCollector {
       await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
       await page.setViewport({ width: 1280, height: 800 });
 
+      // Блокируем картинки, шрифты и медиа для ускорения загрузки в 5 раз на облачных серверах
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        const type = req.resourceType();
+        if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
+          req.abort();
+        } else {
+          req.continue();
+        }
+      });
+
       for (const query of this.searchQueries) {
         try {
           const url = `https://www.threads.net/search?q=${encodeURIComponent(query)}&filter=recent`;
-          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 12000 });
+          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 35000 });
 
           const buttons = await page.$$('div[role="button"]');
           for (const btn of buttons) {

@@ -1,3 +1,4 @@
+import http from 'node:http';
 import 'dotenv/config';
 import { leadAnalyzer } from './ai/lead-analyzer.js';
 import { DjinniCollector } from './collectors/djinni.js';
@@ -15,6 +16,21 @@ import { statsTracker } from './stats/stats-tracker.js';
 import { TelegramBotListener } from './telegram/bot-listener.js';
 import { telegramNotifier } from './telegram/notifier.js';
 import { Collector, RawLead } from './types.js';
+
+// HTTP Health Check сервер для Render.com / Railway / Cloud (предотвращает Timed Out)
+const port = process.env.PORT || 8080;
+const server = http.createServer((req, res) => {
+  if (req.url === '/' || req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', uptime: Math.round(process.uptime()), agent: 'LeadRadar AI' }));
+  } else {
+    res.writeHead(404);
+    res.end();
+  }
+});
+server.listen(port, () => {
+  console.log(`🌐 [Render/Cloud] HTTP Health Check активен на порту ${port}`);
+});
 
 class LeadRadarAgent {
   private collectors: Collector[] = [];

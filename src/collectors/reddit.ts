@@ -1,3 +1,4 @@
+import axios from 'axios';
 import Parser from 'rss-parser';
 import { SOURCES_CONFIG } from '../../config/sources.config.js';
 import { RawLead } from '../types.js';
@@ -9,11 +10,7 @@ export class RedditCollector extends BaseCollector {
 
   constructor() {
     super();
-    this.parser = new Parser({
-      headers: {
-        'User-Agent': 'LeadRadarBot/1.0 by devora'
-      }
-    });
+    this.parser = new Parser();
   }
 
   async fetchLeads(): Promise<RawLead[]> {
@@ -21,7 +18,16 @@ export class RedditCollector extends BaseCollector {
 
     for (const feed of SOURCES_CONFIG.REDDIT_FEEDS) {
       try {
-        const feedData = await this.parser.parseURL(feed.url);
+        const response = await axios.get(feed.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'application/atom+xml,application/xml,text/xml;q=0.9,*/*;q=0.8'
+          },
+          timeout: 15000,
+          maxRedirects: 5
+        });
+
+        const feedData = await this.parser.parseString(response.data);
 
         for (const item of feedData.items || []) {
           if (!item.link || !item.title) continue;
@@ -48,8 +54,15 @@ export class RedditCollector extends BaseCollector {
             postedAt: item.pubDate ? new Date(item.pubDate) : new Date()
           });
         }
+
+        // Пауза между запросами к Reddit для защиты от 429
+        await new Promise(r => setTimeout(r, 2000));
       } catch (error: any) {
-        console.warn(`[RedditCollector] Ошибка загрузки фида ${feed.name}:`, error.message);
+        if (error?.response?.status === 429) {
+          console.warn(`[RedditCollector] Reddit временно ограничил частые запросы (429) для ${feed.name}, пропуск до следующего цикла.`);
+        } else {
+          console.warn(`[RedditCollector] Ошибка загрузки фида ${feed.name}:`, error.message);
+        }
       }
     }
 
