@@ -1,0 +1,26 @@
+{
+  "name": "lead-finder-agent",
+  "version": "1.0.0",
+  "description": "Автономный ИИ-агент поиска и фильтрации заказов на разработку сайтов",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "test:collector": "tsx scripts/test-collector.ts",
+    "test:telegram": "tsx scripts/test-telegram.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@google/genai": "^2.21.0",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.7",
+    "puppeteer-core": "^25.10.0",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
