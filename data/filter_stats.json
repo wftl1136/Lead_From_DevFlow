@@ -1,0 +1,20 @@
+{
+  "startedAt": "2026-09-08T16:00:16.682Z",
+  "lastScanAt": "2026-09-08T16:02:02.159Z",
+  "totalFound": 934,
+  "totalSent": 0,
+  "byReason": {
+    "nonWeb": 0,
+    "oldLead": 1,
+    "antiRu": 0,
+    "duplicate": 933
+  },
+  "bySource": {
+    "Freelancehunt": 150,
+    "Djinni.co": 346,
+    "Threads": 64,
+    "Hacker News": 78,
+    "Reddit": 50,
+    "WeWorkRemotely": 246
+  }
+}

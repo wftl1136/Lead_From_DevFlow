@@ -31,6 +31,16 @@ export class TelegramNotifier {
                 text: '🔗 Открыть заказ на ' + lead.source,
                 url: lead.url
               }
+            ],
+            [
+              {
+                text: '📊 Статистика фильтрации',
+                callback_data: 'get_stats'
+              },
+              {
+                text: '🔄 Сканировать',
+                callback_data: 'run_scan'
+              }
             ]
           ]
         }
@@ -44,7 +54,10 @@ export class TelegramNotifier {
           chat_id: this.chatId,
           text: plainText,
           reply_markup: {
-            inline_keyboard: [[{ text: '🔗 Открыть заказ', url: lead.url }]]
+            inline_keyboard: [
+              [{ text: '🔗 Открыть заказ', url: lead.url }],
+              [{ text: '📊 Статистика фильтрации', callback_data: 'get_stats' }]
+            ]
           }
         });
         return true;
@@ -61,7 +74,15 @@ export class TelegramNotifier {
       await this.sendWithRetry({
         chat_id: this.chatId,
         text,
-        parse_mode: 'HTML'
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '📊 Статистика фильтрации', callback_data: 'get_stats' },
+              { text: '🔄 Сканировать сейчас', callback_data: 'run_scan' }
+            ]
+          ]
+        }
       });
       return true;
     } catch {

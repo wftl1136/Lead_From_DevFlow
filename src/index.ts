@@ -11,6 +11,8 @@ import { db } from './db/database.js';
 import { GeoBlacklistFilter } from './filters/geo-blacklist.js';
 import { RecencyFilter } from './filters/recency-filter.js';
 import { WebDevFilter } from './filters/web-dev-filter.js';
+import { statsTracker } from './stats/stats-tracker.js';
+import { TelegramBotListener } from './telegram/bot-listener.js';
 import { telegramNotifier } from './telegram/notifier.js';
 import { Collector, RawLead } from './types.js';
 
@@ -18,8 +20,9 @@ class LeadRadarAgent {
   private collectors: Collector[] = [];
   private isRunning: boolean = false;
   private intervalMinutes: number = 5;
-  private maxAgeHours: number = 1.0; // НЕ СТАРШЕ 1 ЧАСА
+  private maxAgeHours: number = 5.0;
   private timer: NodeJS.Timeout | null = null;
+  private botListener: TelegramBotListener;
 
   constructor() {
     this.collectors = [
@@ -34,6 +37,7 @@ class LeadRadarAgent {
 
     this.intervalMinutes = parseInt(process.env.SCAN_INTERVAL_MINUTES || '5', 10);
     this.maxAgeHours = parseFloat(process.env.MAX_LEAD_AGE_HOURS || '5.0');
+    this.botListener = new TelegramBotListener(this.maxAgeHours, () => this.runScanCycle());
   }
 
   public async start(): Promise<void> {
@@ -46,12 +50,15 @@ class LeadRadarAgent {
     console.log(`📡 Активные источники: Freelancehunt, Djinni, Threads, Hacker News, Reddit, Remote Boards, Upwork`);
     console.log('====================================================');
 
-    // Оповещение об обновлении правил в Telegram
+    // Запуск слушателя команд Telegram и интерактивных кнопок
+    await this.botListener.start();
+
+    // Оповещение об обновлении правил в Telegram с кнопками
     await telegramNotifier.sendAlert(
       `⏱ <b>LeadRadar AI: Фильтр свежести обновлен (${this.maxAgeHours} ч)!</b>\n\n` +
       `• <b>Максимальный возраст:</b> не старше <b>${this.maxAgeHours * 60} минут (${this.maxAgeHours} ч)</b>\n` +
       `• <b>Старые посты:</b> автоматически отбрасываются\n` +
-      `• <b>Только свежие лиды:</b> запросы на создание и доработку сайтов`
+      `• <b>Интерактивные кнопки:</b> нажмите «📊 Статистика фильтрации» внизу для отчета`
     );
 
     // Первый цикл
@@ -69,6 +76,7 @@ class LeadRadarAgent {
       clearInterval(this.timer);
       this.timer = null;
     }
+    this.botListener.stop();
     console.log('🛑 [LeadRadar AI] Агент остановлен');
   }
 
@@ -96,13 +104,17 @@ class LeadRadarAgent {
         console.log(`📡 Сбор лидов: ${collector.name}...`);
         try {
           const leads: RawLead[] = await collector.fetchLeads();
-          console.log(`   Объявлений получено: ${leads.length}`);
+          const newCount = leads.filter(l => !db.hasSeen(l.id)).length;
+          const duplicateCount = leads.length - newCount;
+          console.log(`   Объявлений получено: ${leads.length} (Новых: ${newCount}, Ранее проверенных: ${duplicateCount})`);
 
           for (const lead of leads) {
             totalFound++;
+            statsTracker.recordLeadFound(lead.source);
 
             // 1. Проверка на дубликаты
             if (db.hasSeen(lead.id)) {
+              statsTracker.recordDuplicate();
               continue;
             }
 
@@ -110,15 +122,17 @@ class LeadRadarAgent {
             const geoCheck = GeoBlacklistFilter.check(lead);
             if (!geoCheck.allowed) {
               totalDroppedRu++;
+              statsTracker.recordAntiRu();
               db.markSeen(lead, 0);
               console.log(`   ⛔️ [Anti-RU] Отброшен: "${lead.title.slice(0, 35)}..." (${geoCheck.reason})`);
               continue;
             }
 
-            // 3. Фильтр свежести: заказ должен быть выложен НЕ БОЛЕЕ 1 ЧАСА НАЗАД
+            // 3. Фильтр свежести: заказ должен быть выложен НЕ БОЛЕЕ maxAgeHours НАЗАД
             const recencyCheck = RecencyFilter.isRecent(lead, this.maxAgeHours);
             if (!recencyCheck.recent) {
               totalDroppedOld++;
+              statsTracker.recordOldLead();
               db.markSeen(lead, 0);
               console.log(`   ⏰ [Старый заказ] Отброшен: "${lead.title.slice(0, 35)}..." (${recencyCheck.ageMinutes} мин назад > ${this.maxAgeHours * 60} мин)`);
               continue;
@@ -128,6 +142,7 @@ class LeadRadarAgent {
             const webCheck = WebDevFilter.isTargetWebProject(lead);
             if (!webCheck.match) {
               totalDroppedNonWeb++;
+              statsTracker.recordNonWeb();
               db.markSeen(lead, 0);
               console.log(`   🚫 [Не сайт] Отброшен: "${lead.title.slice(0, 40)}..." (${webCheck.reason})`);
               continue;
@@ -142,6 +157,7 @@ class LeadRadarAgent {
             const sent = await telegramNotifier.sendLead(analyzed);
             if (sent) {
               totalSent++;
+              statsTracker.recordSent();
               await new Promise(res => setTimeout(res, 1200));
             }
           }
@@ -151,6 +167,7 @@ class LeadRadarAgent {
       }
     } finally {
       this.isRunning = false;
+      statsTracker.recordScanComplete();
       const durationSec = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`✅ Цикл завершен за ${durationSec}с. Свежих заказов отправлено: ${totalSent} (РФ: ${totalDroppedRu}, Старых (>${this.maxAgeHours}ч): ${totalDroppedOld}, Не-сайтов: ${totalDroppedNonWeb})\n`);
     }
