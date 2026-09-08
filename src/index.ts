@@ -152,7 +152,7 @@ class LeadRadarAgent {
     } finally {
       this.isRunning = false;
       const durationSec = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`✅ Цикл завершен за ${durationSec}с. Свежих заказов отправлено: ${totalSent} (РФ: ${totalDroppedRu}, Старых (>1ч): ${totalDroppedOld}, Не-сайтов: ${totalDroppedNonWeb})\n`);
+      console.log(`✅ Цикл завершен за ${durationSec}с. Свежих заказов отправлено: ${totalSent} (РФ: ${totalDroppedRu}, Старых (>${this.maxAgeHours}ч): ${totalDroppedOld}, Не-сайтов: ${totalDroppedNonWeb})\n`);
     }
 
     return { found: totalFound, sent: totalSent, droppedRu: totalDroppedRu, droppedOld: totalDroppedOld, droppedNonWeb: totalDroppedNonWeb };
